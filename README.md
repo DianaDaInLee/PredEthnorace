@@ -70,7 +70,23 @@ glob.glob('demo/*/*')
  'demo/diana_lee/diana_lee_2.jpg']
 ```
 
+Using the demo dataset,
+
+``` python
+# Python
+import pyreadr
+df = pyreadr.read_r('demo.rdata') 
+demo = df["demo"]
+
+# Collect Images
+for index, row in demo.iterrows():
+    print(row['fullname'])
+    img_search(fullname = row['fullname'], maxnum = 3, imgfolder = 'demo')
+```
+
 ### 1.2. Generate Predictions
+
+#### 1.2.1 Use CNN Model
 
 We provide a python function `img_pred` (in `img_pred.py`) that allows
 for users to predict ethnorace for each image using `deepface` developed
@@ -96,40 +112,66 @@ The `img_pred` function takes the following arguments:
   Default is TRUE.
 
 ``` python
-pred = img_pred(imgfolder = 'demo', subfolder = 'diana_lee', det = "opencv", out_csv = True)
-pred
+pred = img_pred(imgfolder = 'demo', det = "opencv", out_csv = True)
 ```
+
+    ##         asian     indian        black        white middle.eastern
+    ## 1 60.16002656  0.7348647  0.096435158 2.662113e+01   1.5252286546
+    ## 2 87.95337677  3.1764846  0.195944449 6.775063e-01   0.0492574181
+    ## 3 98.26723337  0.1850487  0.001583018 8.093083e-01   0.0083999599
+    ## 4  0.35295452  2.0282285 97.163039446 3.709444e-03   0.0037028243
+    ## 5 23.88515025 16.9022009  6.558652222 9.683461e+00   9.3953385949
+    ## 6  0.05296969  0.3474497 99.452441898 4.515984e-04   0.0003267264
+    ##   latino.hispanic   dominant_race                                       fn
+    ## 1      10.8623109           asian           demo/diana_lee/diana_lee_0.jpg
+    ## 2       7.9474255           asian           demo/diana_lee/diana_lee_1.jpg
+    ## 3       0.7284286           asian           demo/diana_lee/diana_lee_2.jpg
+    ## 4       0.4483673           black demo/shannon_hardin/shannon_hardin_0.jpg
+    ## 5      33.5752010 latino hispanic demo/shannon_hardin/shannon_hardin_1.jpg
+    ## 6       0.1463617           black demo/shannon_hardin/shannon_hardin_2.jpg
+    ##   detector
+    ## 1   opencv
+    ## 2   opencv
+    ## 3   opencv
+    ## 4   opencv
+    ## 5   opencv
+    ## 6   opencv
 
 Not that there are many many different CNN models available. Our
 function is merely a demonstration using one of these models.
 
-### 1.3 All at Once
+#### 1.2.2 Aggregate Generated Predictions
 
-For large dataset with many names, loop it!
-
-``` python
-# Python
-import pyreadr
-df = pyreadr.read_r('demo.rdata') 
-demo = df["demo"]
-
-# Collect Images
-for index, row in demo.iterrows():
-    print(row['fullname'])
-    img_search(fullname = row['fullname'], maxnum = 3, imgfolder = 'demo')
-    
-# Generate Predictions
-img_pred(imgfolder = 'demo', det = "opencv", out_csv = True)
-```
+Note that the predictions are made for *each* image. To get a single
+vector of predicted probability distribution for a given name, you can
+take a simple average or weighted average by the order in which the
+images appear in the search engine (these are identifiable by the file
+name). In our validation, we find that up-weighting images that appear
+first results in a slightly higher accuracy.
 
 ``` r
-# R
-# Merge It with Raw Data
-pred <- read.csv('demo/img_pred.csv') %>%
-  separate(fn, c('imgfolder', 'keyword', 'filenmae'), sep = '/') %>%
-  select(asian:latino.hispanic, keyword) %>%
-  rename_at(vars(asian:latino.hispanic), ~ paste0('image.', .x))
-demo <- left_join(demo %>% mutate(keyword = tolower(gsub(" ", "_", fullname))), pred)
+pred_agg <- pred %>%
+  separate(fn, c('imgfolder', 'keyword', 'filename'), sep = '/') %>%
+  mutate(order = abs(as.numeric(stringr::str_extract(filename, '[0-9]+')) - 3)) %>%
+  group_by(keyword) %>%
+  summarize(across(asian:latino.hispanic, ~weighted.mean(.x, w = order)))
+head(pred_agg)
+```
+
+    ## # A tibble: 6 × 7
+    ##   keyword            asian indian   black   white middle.eastern latino.hispanic
+    ##   <chr>              <dbl>  <dbl>   <dbl>   <dbl>          <dbl>           <dbl>
+    ## 1 adam_mcgough     0.00146  0.243  0.0106 85.7          12.3                1.78
+    ## 2 andrea_waner    18.3      0.709  0.286  72.9           2.90               4.93
+    ## 3 betsy_wilkerson  6.13     1.52  90.9     0.0120        0.00440            1.46
+    ## 4 bill_kinne       4.70     1.07   0.319  80.1           6.33               7.51
+    ## 5 blaine_griffin   5.81     3.34  73.2     7.52          4.97               5.18
+    ## 6 brenda_fincher  17.2      7.82  37.1    13.0           7.36              17.6
+
+``` r
+# Merge it with Raw Data
+pred_agg <- rename_at(pred_agg, vars(asian:latino.hispanic), ~ paste0('image.', .x))
+demo1 <- left_join(demo %>% mutate(keyword = tolower(gsub(" ", "_", fullname))), pred_agg)
 ```
 
     ## Joining with `by = join_by(keyword)`
@@ -142,46 +184,39 @@ surname-based predictions:
 
 ``` r
 library(wru)
-demo <- predict_race(voter.file = demo, surname.only = T)
-demo <- demo %>% rename_at(vars(matches('^pred')), ~ gsub('pred', 'bayes', .x))
-head(demo)
+demo2 <- predict_race(voter.file = demo1, surname.only = T)
+demo2 <- demo2 %>% rename_at(vars(matches('^pred\\.')), ~ gsub('pred', 'bayes', .x))
 ```
-
-    FALSE   state           city year firstname    surname         fullname      race
-    FALSE 1    OH       columbus 2021   shannon     hardin   shannon hardin      <NA>
-    FALSE 2    MA         boston 2021   michael   flaherty michael flaherty      <NA>
-    FALSE 3    NJ        passaic 2021      john   bartlett    john bartlett caucasian
-    FALSE 4    CA         orange 2021   katrina      foley    katrina foley      <NA>
-    FALSE 5    TX    san antonio 2021      greg brockhouse  greg brockhouse      <NA>
-    FALSE 6    FL st. petersburg 2021      gina   driscoll    gina driscoll      <NA>
-    FALSE            keyword image.asian image.indian image.black image.white
-    FALSE 1   shannon_hardin          NA           NA          NA          NA
-    FALSE 2 michael_flaherty          NA           NA          NA          NA
-    FALSE 3    john_bartlett          NA           NA          NA          NA
-    FALSE 4    katrina_foley          NA           NA          NA          NA
-    FALSE 5  greg_brockhouse          NA           NA          NA          NA
-    FALSE 6    gina_driscoll          NA           NA          NA          NA
-    FALSE   image.middle.eastern image.latino.hispanic bayes.whi   bayes.bla  bayes.his
-    FALSE 1                   NA                    NA 0.7252565 0.160995223 0.02512640
-    FALSE 2                   NA                    NA 0.9316636 0.004681462 0.02188686
-    FALSE 3                   NA                    NA 0.8648793 0.038173052 0.03105697
-    FALSE 4                   NA                    NA 0.8879568 0.034392678 0.02535202
-    FALSE 5                   NA                    NA 0.8999722 0.000000000 0.02913244
-    FALSE 6                   NA                    NA 0.9131907 0.016200660 0.02926635
-    FALSE     bayes.asi  bayes.oth
-    FALSE 1 0.008044030 0.08057786
-    FALSE 2 0.009206857 0.03256120
-    FALSE 3 0.009371682 0.05651902
-    FALSE 4 0.010455758 0.04184277
-    FALSE 5 0.005769053 0.06512630
-    FALSE 6 0.008770564 0.03257172
 
 ## 3. Run multinomial logistic regression
 
 ``` r
 library(nnet)
-#mod <- multinom(race ~ img.whi + img.bla + img.his + img.asi + bayes.whi + bayes.bla + bayes.his + bayes.asi + bayes.oth, data = demo)
-#demo$pred_race = predict(mod, newdata = demo, "class")
+cov <- names(demo2)[which(grepl('bayes|image', names(demo2)))]
+eq  <- as.formula(paste('race ~ ', paste(cov, collapse = ' + ')))
+print(eq)
+```
+
+    ## race ~ image.asian + image.indian + image.black + image.white + 
+    ##     image.middle.eastern + image.latino.hispanic + bayes.whi + 
+    ##     bayes.bla + bayes.his + bayes.asi + bayes.oth
+
+``` r
+mod <- multinom(eq, data = demo2)
+```
+
+    ## # weights:  52 (36 variable)
+    ## initial  value 40.202536 
+    ## iter  10 value 17.107391
+    ## iter  20 value 7.841235
+    ## iter  30 value 4.328976
+    ## iter  40 value 1.717132
+    ## iter  50 value 0.001449
+    ## final  value 0.000067 
+    ## converged
+
+``` r
+demo2$pred_race = predict(mod, newdata = demo2, "class")
 ```
 
 Users are free to employ fancier machine learning algorithms (but our
