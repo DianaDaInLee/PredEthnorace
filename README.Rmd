@@ -1,7 +1,7 @@
 ---
 title: "Step-by-Step Guidelines to Implement Hybrid Ethnoracial Prediction"
 author: "Diana Da In Lee (dl2860@columbia.edu)"
-date: "`r Sys.Date()`"
+date: "Last Updated: `r format(Sys.time(), '%d %B, %Y')`"
 output: github_document
 ---
 
@@ -15,33 +15,90 @@ knitr::opts_chunk$set(echo = TRUE)
 options(warn = -1) 
 ```
 
-This guideline walks through how to implement the proposed hybrid approch to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
+This guideline walks through how to implement the proposed hybrid approach to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
 
-We will use the following example data: 
+We will use the following example data `demo` on 100 US city councilor names with 30\% of the names have verified ethnoracial information: 
 
 ```{r echo = F}
 load('data/demo.rdata')
-head(demo)
+head(demo[,2:ncol(demo)])
 ```
 
 ## 1. Image-Based Prediction
 
+We first want to collect images associated with each name and make predictions based on the images. We provide two python functions `img_search` and `img_pred` to do these steps. For users who don't have python installed in their computer, we also provide a Google Colab demonstration here:.  
+
 ### 1.1. Collect Images
 
-Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engine. We provide a python script `collect_img.py` that allows for users to collect images from [DuckDuckGo](https://duckduckgo.com). The function automatically 1) removes images with no faces; 2) removes images with multiple faces; and 3) de-dupes identical faces (remove one of the images that are detected to be of a same person as the one in another image).
+Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engine. We provide a python function `img_search` (in `img_pred.py`) that allows for users to collect images from [DuckDuckGo](https://duckduckgo.com). The function automatically 1) removes images with no faces; 2) removes images with multiple faces; and 3) de-dupes identical faces (remove one of the images that are detected to be of a same person as the one in another image).
 
-The `search` function in `collect_img.py` takes four arguments:
+The `img_search` function in takes the following arguments:
 
-* `fullname`: First and last name to be used as a keyword for image search.
-* `maxnum`: Total number of images you want to collect per keyword.
-* `imgfolder`: Name of the folder you want the images to be saved.
-* `detector`: Image detector option. Choose from `opencv`, `ssd`, `mtcnn`, `dlib`, `retinaface`, `mediapipe`, `yunet`, and `yolov8`. For differences across the detectors, see [https://github.com/serengil/deepface](https://github.com/serengil/deepface).
+* `fullname` (string): First and last name to be used as a keyword for image search.
+* `maxnum` (integer): Total number of images you want to collect per keyword.
+* `imgfolder` (string): Name of the folder you want the images to be saved. It will automatically create the folder in your working directory.
+
+Each image will be saved in jpg as [`keyword`]_[0 through `maxnum`].jpg. All images associated with each keyword will be stored in its own folder named after the keyword (so make sure to dedup the full names in your dataset!). 
+
+```{python, eval = F}
+img_search(fullname = 'diana lee', maxnum = 3, imgfolder = 'demo')
+glob.glob('demo/*/*')
+```
+````{python, eval = F}
+['demo/diana_lee/diana_lee_0.jpg',
+ 'demo/diana_lee/diana_lee_1.jpg',
+ 'demo/diana_lee/diana_lee_2.jpg']
+````
 
 ### 1.2. Generate Predictions
 
-Many different CNN models are available. Here, we demonstrate our method using `deepface` developed by [Sefik Serengil](https://github.com/serengil/deepface) that uses a pre-trained CNN model [VGG-Face](https://sefiks.com/2018/08/06/deep-face-recognition-with-keras/) to predict ethnorace from an image. This package is available in python and is fairly straightforward to use. 
+We provide a python function `img_pred` (in `img_pred.py`) that allows for users to predict ethnorace for each image using `deepface` developed by [Sefik Serengil](https://github.com/serengil/deepface) that uses a pre-trained CNN model [VGG-Face](https://sefiks.com/2018/08/06/deep-face-recognition-with-keras/) to predict ethnorace from an image. This package is available in python and is fairly straightforward to use. 
 
-See Google Colab demonstration that runs 1.1 and 1.2 in python here:. 
+The `img_pred` function takes the following arguments:
+
+* `imgfolder` (string): Name of the folder where the images are saved. Should be the same as the folder name used in `img_search`.
+* `subfolder` (string): Name of a particular subfolder (i.e., keyword) under `imgfolder` that you want predictions to be performed. Default is NULL, which will generate predictions for all images in all subfolders saved in `imgfolder`.
+* `det` (string): face detector backend to opencv (default), retinaface, mtcnn, ssd, dlib, mediapipe or yolov8. See [https://github.com/serengil/deepface](https://github.com/serengil/deepface) for differences across different detectors.
+* `out_csv` (boolean): Save the result as a csv file to a `imgfolder`. Default is TRUE.
+
+```{python, eval = F}
+pred = img_pred(imgfolder = 'demo', subfolder = 'diana_lee', det = "opencv", out_csv = True)
+pred
+```
+```{r, eval = F, echo = F}
+pred <- read.csv('data/img_pred.csv')
+pred
+```
+
+Not that there are many many different CNN models available. Our function is merely a demonstration using one of these models.
+
+### 1.3 All at Once
+
+For large dataset with many names, loop it!
+
+```{python, eval = F}
+# Python
+import pyreadr
+df = pyreadr.read_r('demo.rdata') 
+demo = df["demo"]
+
+# Collect Images
+for index, row in demo.iterrows():
+    print(row['fullname'])
+    img_search(fullname = row['fullname'], maxnum = 3, imgfolder = 'demo')
+    
+# Generate Predictions
+img_pred(imgfolder = 'demo', det = "opencv", out_csv = True)
+```
+```{r}
+# R
+# Merge It with Raw Data
+pred <- read.csv('data/img_pred.csv') %>%
+  separate(fn, c('imgfolder', 'keyword', 'filenmae'), sep = '/') %>%
+  select(asian:latino.hispanic, keyword) %>%
+  rename_at(vars(asian:latino.hispanic), ~ paste0('image.', .x))
+demo <- left_join(demo %>% mutate(keyword = tolower(gsub(" ", "_", fullname))), pred)
+```
 
 ## 2. Surname-Based Prediction
 
