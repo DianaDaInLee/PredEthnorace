@@ -9,23 +9,20 @@ approach to ethnoracial prediction in Lee, Diana, and Yamil Velez.
 the race and ethnicity of public officials.](https://osf.io/tpsv6/)”
 (2023+).
 
-We will use the following example data `demo` on 100 US city councilor
-names with 30% of the names have verified ethnoracial information:
+We will use the US local elections dataset compiled by [de-Benedictis
+Kessner et al (2023)](https://dash.harvard.edu/handle/1/37373139). We’ve
+sampled 100 elections from the main dataset with 30% of the names with
+verified ethnoracial information:
 
-    ##    state         city year       office firstname       surname
-    ## 6     NY  Cheektowaga 2019 City Council   richard      rusiniak
-    ## 8     NY Mount Vernon 2019 City Council   derrick      thompson
-    ## 12    NY New Rochelle 2019 City Council    yadira ramos-herbert
-    ## 13    NY New Rochelle 2019 City Council    albert     tarantino
-    ## 29    IL      Chicago 2019 City Council     brian       hopkins
-    ## 39    IL      Chicago 2019 City Council     jason         ervin
-    ##                fullname race
-    ## 6   richard j. rusiniak <NA>
-    ## 8      derrick thompson <NA>
-    ## 12 yadira ramos-herbert <NA>
-    ## 13     albert tarantino <NA>
-    ## 29        brian hopkins <NA>
-    ## 39          jason ervin <NA>
+    ## # A tibble: 6 × 7
+    ##   state city            year firstname surname    fullname         race     
+    ##   <chr> <chr>          <dbl> <chr>     <chr>      <chr>            <chr>    
+    ## 1 OH    columbus        2021 shannon   hardin     shannon hardin   <NA>     
+    ## 2 MA    boston          2021 michael   flaherty   michael flaherty <NA>     
+    ## 3 NJ    passaic         2021 john      bartlett   john bartlett    caucasian
+    ## 4 CA    orange          2021 katrina   foley      katrina foley    <NA>     
+    ## 5 TX    san antonio     2021 greg      brockhouse greg brockhouse  <NA>     
+    ## 6 FL    st. petersburg  2021 gina      driscoll   gina driscoll    <NA>
 
 ## 1. Image-Based Prediction
 
@@ -33,7 +30,8 @@ We first want to collect images associated with each name and make
 predictions based on the images. We provide two python functions
 `img_search` and `img_pred` to do these steps. For users who don’t have
 python installed in their computer, we also provide a Google Colab
-demonstration here:.
+demonstration here:
+[PredEthnorace_Demo.ipynb](https://github.com/DianaDaInLee/PredEthnorace/blob/main/PredEthnorace_Demo.ipynb).
 
 ### 1.1. Collect Images
 
@@ -127,7 +125,7 @@ img_pred(imgfolder = 'demo', det = "opencv", out_csv = True)
 ``` r
 # R
 # Merge It with Raw Data
-pred <- read.csv('data/img_pred.csv') %>%
+pred <- read.csv('demo/img_pred.csv') %>%
   separate(fn, c('imgfolder', 'keyword', 'filenmae'), sep = '/') %>%
   select(asian:latino.hispanic, keyword) %>%
   rename_at(vars(asian:latino.hispanic), ~ paste0('image.', .x))
@@ -149,34 +147,34 @@ demo <- demo %>% rename_at(vars(matches('^pred')), ~ gsub('pred', 'bayes', .x))
 head(demo)
 ```
 
-    FALSE    place_fips state         city year       office firstname       surname
-    FALSE 1     3615000    NY  Cheektowaga 2019 City Council   richard      rusiniak
-    FALSE 2     3649121    NY Mount Vernon 2019 City Council   derrick      thompson
-    FALSE 92    3650617    NY New Rochelle 2019 City Council    yadira ramos-herbert
-    FALSE 3     3650617    NY New Rochelle 2019 City Council    albert     tarantino
-    FALSE 4     1714000    IL      Chicago 2019 City Council     brian       hopkins
-    FALSE 5     1714000    IL      Chicago 2019 City Council     jason         ervin
-    FALSE                fullname race              keyword image.asian image.indian
-    FALSE 1   richard j. rusiniak <NA>  richard_j._rusiniak          NA           NA
-    FALSE 2      derrick thompson <NA>     derrick_thompson          NA           NA
-    FALSE 92 yadira ramos-herbert <NA> yadira_ramos-herbert          NA           NA
-    FALSE 3      albert tarantino <NA>     albert_tarantino          NA           NA
-    FALSE 4         brian hopkins <NA>        brian_hopkins          NA           NA
-    FALSE 5           jason ervin <NA>          jason_ervin          NA           NA
-    FALSE    image.black image.white image.middle.eastern image.latino.hispanic
-    FALSE 1           NA          NA                   NA                    NA
-    FALSE 2           NA          NA                   NA                    NA
-    FALSE 92          NA          NA                   NA                    NA
-    FALSE 3           NA          NA                   NA                    NA
-    FALSE 4           NA          NA                   NA                    NA
-    FALSE 5           NA          NA                   NA                    NA
-    FALSE     bayes.whi   bayes.bla  bayes.his   bayes.asi  bayes.oth
-    FALSE 1  0.95249360 0.000000000 0.01157469 0.013752710 0.02217901
-    FALSE 2  0.64759552 0.235710952 0.02892281 0.007866069 0.07990464
-    FALSE 92 0.05172637 0.008414011 0.86584734 0.057962502 0.01604978
-    FALSE 3  0.90709588 0.003516968 0.05106396 0.005893921 0.03242927
-    FALSE 4  0.68868050 0.208418805 0.02506819 0.006673289 0.07115921
-    FALSE 5  0.53933798 0.355056712 0.02835687 0.007017104 0.07023134
+    FALSE   state           city year firstname    surname         fullname      race
+    FALSE 1    OH       columbus 2021   shannon     hardin   shannon hardin      <NA>
+    FALSE 2    MA         boston 2021   michael   flaherty michael flaherty      <NA>
+    FALSE 3    NJ        passaic 2021      john   bartlett    john bartlett caucasian
+    FALSE 4    CA         orange 2021   katrina      foley    katrina foley      <NA>
+    FALSE 5    TX    san antonio 2021      greg brockhouse  greg brockhouse      <NA>
+    FALSE 6    FL st. petersburg 2021      gina   driscoll    gina driscoll      <NA>
+    FALSE            keyword image.asian image.indian image.black image.white
+    FALSE 1   shannon_hardin          NA           NA          NA          NA
+    FALSE 2 michael_flaherty          NA           NA          NA          NA
+    FALSE 3    john_bartlett          NA           NA          NA          NA
+    FALSE 4    katrina_foley          NA           NA          NA          NA
+    FALSE 5  greg_brockhouse          NA           NA          NA          NA
+    FALSE 6    gina_driscoll          NA           NA          NA          NA
+    FALSE   image.middle.eastern image.latino.hispanic bayes.whi   bayes.bla  bayes.his
+    FALSE 1                   NA                    NA 0.7252565 0.160995223 0.02512640
+    FALSE 2                   NA                    NA 0.9316636 0.004681462 0.02188686
+    FALSE 3                   NA                    NA 0.8648793 0.038173052 0.03105697
+    FALSE 4                   NA                    NA 0.8879568 0.034392678 0.02535202
+    FALSE 5                   NA                    NA 0.8999722 0.000000000 0.02913244
+    FALSE 6                   NA                    NA 0.9131907 0.016200660 0.02926635
+    FALSE     bayes.asi  bayes.oth
+    FALSE 1 0.008044030 0.08057786
+    FALSE 2 0.009206857 0.03256120
+    FALSE 3 0.009371682 0.05651902
+    FALSE 4 0.010455758 0.04184277
+    FALSE 5 0.005769053 0.06512630
+    FALSE 6 0.008770564 0.03257172
 
 ## 3. Run multinomial logistic regression
 

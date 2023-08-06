@@ -17,16 +17,16 @@ options(warn = -1)
 
 This guideline walks through how to implement the proposed hybrid approach to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
 
-We will use the following example data `demo` on 100 US city councilor names with 30\% of the names have verified ethnoracial information: 
+We will use the US local elections dataset compiled by [de-Benedictis Kessner et al (2023)](https://dash.harvard.edu/handle/1/37373139). We've sampled 100 elections from the main dataset with 30\% of the names with verified ethnoracial information: 
 
 ```{r echo = F}
 load('data/demo.rdata')
-head(demo[,2:ncol(demo)])
+head(demo)
 ```
 
 ## 1. Image-Based Prediction
 
-We first want to collect images associated with each name and make predictions based on the images. We provide two python functions `img_search` and `img_pred` to do these steps. For users who don't have python installed in their computer, we also provide a Google Colab demonstration here:.  
+We first want to collect images associated with each name and make predictions based on the images. We provide two python functions `img_search` and `img_pred` to do these steps. For users who don't have python installed in their computer, we also provide a Google Colab demonstration here: [PredEthnorace_Demo.ipynb](https://github.com/DianaDaInLee/PredEthnorace/blob/main/PredEthnorace_Demo.ipynb).  
 
 ### 1.1. Collect Images
 
@@ -93,7 +93,7 @@ img_pred(imgfolder = 'demo', det = "opencv", out_csv = True)
 ```{r}
 # R
 # Merge It with Raw Data
-pred <- read.csv('data/img_pred.csv') %>%
+pred <- read.csv('demo/img_pred.csv') %>%
   separate(fn, c('imgfolder', 'keyword', 'filenmae'), sep = '/') %>%
   select(asian:latino.hispanic, keyword) %>%
   rename_at(vars(asian:latino.hispanic), ~ paste0('image.', .x))
