@@ -2,9 +2,7 @@
 title: "Guidelines"
 author: "Diana Da In Lee"
 date: "2023-08-05"
-output: 
-  html_document:
-    keep_md: true
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
