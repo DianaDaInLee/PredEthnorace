@@ -1,5 +1,5 @@
 ---
-title: "Guidelines"
+title: "Step-by-Step Guidelines to Implement Hybrid Ethnoracial Prediction"
 author: "Diana Da In Lee (dl2860@columbia.edu)"
 date: "`r Sys.Date()`"
 output: github_document
@@ -12,6 +12,7 @@ library(dplyr)
 library(magrittr)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1) 
 ```
 
 This guideline walks through how to implement the proposed hybrid approch to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
@@ -46,13 +47,14 @@ See Google Colab demonstration that runs 1.1 and 1.2 in python here:.
 
 This part is very simple. Use `wru` package created by [Imai and Khanna (2016)](https://imai.fas.harvard.edu/research/race.html) to generate surname-based predictions:
 
-```{r}
+```{r, message = FALSE, comment = FALSE, warning = FALSE}
 library(wru)
 demo <- predict_race(voter.file = demo, surname.only = T)
 demo <- demo %>% rename_at(vars(matches('^pred')), ~ gsub('pred', 'bayes', .x))
+head(demo)
 ```
 
-## Run multinomial logistic regression
+## 3. Run multinomial logistic regression
 
 ```{r}
 library(nnet)
