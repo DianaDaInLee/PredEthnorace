@@ -1,7 +1,7 @@
 ---
 title: "Guidelines"
-author: "Diana Da In Lee"
-date: "2023-08-05"
+author: "Diana Da In Lee (dl2860@columbia.edu)"
+date: "`r Sys.Date()`"
 output: github_document
 ---
 
@@ -22,26 +22,25 @@ We will use the following example data:
 load('data/demo.rdata')
 head(demo)
 ```
+
 ## 1. Image-Based Prediction
 
 ### 1.1. Collect Images
 
-Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engine. We provide a demo python code `collect_img.py` that allows for users to collect images from [DuckDuckGo](https://duckduckgo.com). 
-
-The function automatically 1) removes images with no faces; 2) removes images with multiple faces; and 3) de-dupes identical faces (remove one of the images that are detected to be of a same person as the one in another image).
+Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engine. We provide a python script `collect_img.py` that allows for users to collect images from [DuckDuckGo](https://duckduckgo.com). The function automatically 1) removes images with no faces; 2) removes images with multiple faces; and 3) de-dupes identical faces (remove one of the images that are detected to be of a same person as the one in another image).
 
 The `search` function in `collect_img.py` takes four arguments:
 
 * `fullname`: First and last name to be used as a keyword for image search.
-* `code`: Suffix of the jpeg filename to be used. Files will be saved with the naming convention "[code]_[1 through maxnum].jpg"
 * `maxnum`: Total number of images you want to collect per keyword.
 * `imgfolder`: Name of the folder you want the images to be saved.
-* `detector`: Image prediction detector. Choose from `opencv`, `ssd`, `mtcnn`, `dlib`, `retinaface`, `mediapipe`, `yunet`, and `yolov8`. For differences across the detector, see [https://github.com/serengil/deepface](https://github.com/serengil/deepface).
+* `detector`: Image detector option. Choose from `opencv`, `ssd`, `mtcnn`, `dlib`, `retinaface`, `mediapipe`, `yunet`, and `yolov8`. For differences across the detectors, see [https://github.com/serengil/deepface](https://github.com/serengil/deepface).
 
 ### 1.2. Generate Predictions
 
-Many different CNN models are available. Here, we demonstrate our method using `deepface` (https://github.com/serengil/deepface), which is implemented in Python.
+Many different CNN models are available. Here, we demonstrate our method using `deepface` developed by [Sefik Serengil](https://github.com/serengil/deepface) that uses a pre-trained CNN model [VGG-Face](https://sefiks.com/2018/08/06/deep-face-recognition-with-keras/) to predict ethnorace from an image. This package is available in python and is fairly straightforward to use. 
 
+See Google Colab demonstration that runs 1.1 and 1.2 in python here:. 
 
 ## 2. Surname-Based Prediction
 
@@ -60,7 +59,5 @@ library(nnet)
 #mod <- multinom(race ~ img.whi + img.bla + img.his + img.asi + bayes.whi + bayes.bla + bayes.his + bayes.asi + bayes.oth, data = demo)
 #demo$pred_race = predict(mod, newdata = demo, "class")
 ```
-
-
 
 Users are free to employ fancier machine learning algorithms (but our validation finds that this simple multinomial model performs just as well).
