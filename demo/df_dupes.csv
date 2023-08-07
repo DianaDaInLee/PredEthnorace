@@ -1,0 +1,11 @@
+image1,image2,dupe,distance,model,detector
+demo/image2.jpeg,demo/image1.jpeg,False,0.5536686969603244,OpenFace,opencv
+demo/image2.jpeg,demo/image4.jpeg,False,0.991720836719263,OpenFace,opencv
+demo/image2.jpeg,demo/image3.jpeg,False,1.0273917668594612,OpenFace,opencv
+demo/image2.jpeg,demo/image5.jpg,False,0.9787431039411505,OpenFace,opencv
+demo/image1.jpeg,demo/image4.jpeg,True,0.5256946672125227,OpenFace,opencv
+demo/image1.jpeg,demo/image3.jpeg,False,0.7789021226614015,OpenFace,opencv
+demo/image1.jpeg,demo/image5.jpg,True,0.479171612965919,OpenFace,opencv
+demo/image4.jpeg,demo/image3.jpeg,False,1.1320909776330423,OpenFace,opencv
+demo/image4.jpeg,demo/image5.jpg,True,0.4099045702819727,OpenFace,opencv
+demo/image3.jpeg,demo/image5.jpg,False,1.1418930986399165,OpenFace,opencv
