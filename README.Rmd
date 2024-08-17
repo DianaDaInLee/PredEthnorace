@@ -1,8 +1,8 @@
 ---
-title: "Guidelines"
-author: "Diana Da In Lee"
-date: "2023-08-05"
-output: html_document
+title: "Step-by-Step Guidelines to Implement Hybrid Ethnoracial Prediction"
+author: "Diana Da In Lee (dl2860@columbia.edu)"
+date: "Last Updated: `r format(Sys.time(), '%d %B, %Y')`"
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -12,55 +12,95 @@ library(dplyr)
 library(magrittr)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1) 
 ```
 
-This guideline walks through how to implement the proposed hybrid approch to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
+This guideline walks through how to implement the proposed hybrid approach to ethnoracial prediction in Lee, Diana, and Yamil Velez. "[Measuring descriptive representation at scale: Methods for predicting the race and ethnicity of public officials.](https://osf.io/tpsv6/)" (2023+).
 
-We will use the following example data: 
-
-```{r echo = F}
-load('demo.rdata')
-head(demo)
-```
 ## 1. Image-Based Prediction
+
+We first want to collect images associated with each name and make predictions based on the images. We provide two python functions `img_search` and `img_pred` to do these steps. For users who don't have python installed in their computer, we also provide a Google Colab demonstration here: [PredEthnorace_Demo.ipynb](https://github.com/DianaDaInLee/PredEthnorace/blob/main/PredEthnorace_Demo.ipynb).  
 
 ### 1.1. Collect Images
 
-Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engine. We provide a demo python code `collect_img.py` that allows for users to collect images from [DuckDuckGo](https://duckduckgo.com). 
+Collect profile images of the individuals in the dataset, using their first and last names as a keyword. Users may use any public engines with few notable ones include:
 
-The function automatically 1) removes images with no faces; 2) removes images with multiple faces; and 3) de-dupes identical faces (remove one of the images that are detected to be of a same person as the one in another image).
+* Microsoft Bing: https://www.microsoft.com/en-us/bing/apis/bing-image-search-api
+* Google Vision API: https://cloud.google.com/vision/ 
+* DuckDuckGo: https://www.duckduckgo.com. 
 
-The `search` function in `collect_img.py` takes four arguments:
+Private search APIs also exist that allows to search images in various engines. For example, [SerpAPI](https://serpapi.com/images-results) is a real time API to access search results from Bing, DuckDuckGo, Google, and more. Open-source packages are also available (e.g., see [duckduckgo-search](https://pypi.org/project/duckduckgo-search/)).
 
-* `fullname`: First and last name to be used as a keyword for image search.
-* `code`: Suffix of the jpeg filename to be used. Files will be saved with the naming convention "[code]_[1 through maxnum].jpg"
-* `maxnum`: Total number of images you want to collect per keyword.
-* `imgfolder`: Name of the folder you want the images to be saved.
-* `detector`: Image prediction detector. Choose from `opencv`, `ssd`, `mtcnn`, `dlib`, `retinaface`, `mediapipe`, `yunet`, and `yolov8`. For differences across the detector, see [https://github.com/serengil/deepface](https://github.com/serengil/deepface).
+We provide a python function `img_check` that allows for users to check for the quality of images collected. It checks for the total number of faces detected as well as any duplicated faces (i.e., detected to be of a same person). It is basically a wrapper for `deepface` package created by [Serengil](https://github.com/serengil/deepface). It takes following arguments:
+
+* `imgfolder` (string): Name of the folder where images are saved.
+* `detector` (string): Detector backend for facial recognition. Choose from "opencv" (default), "retinaface", "mtcnn", "ssd", "dlib", "mediapipe" or "yolov8". See https://github.com/serengil/deepface for differences across different detectors.
+* `distance` (string): Distance metric to measure similarity between two images. Choose from "cosine", "euclidean", "euclidean_l2" (default).
+* `model` (string): Face regonition model to use. Choose from "VGG-Face", "Facenet", "Facenet512", "OpenFace" (default), "DeepFace", "DeepID", "ArcFace",  "Dlib", "SFace". See https://github.com/serengil/deepface for differences across different models.
+
+Using the demo images,
+```{python, eval = F}
+a, b = img_check(imgfolder = 'demo')
+```
+```{r, echo = F}
+a <- read.csv('demo/df_faces.csv')
+a
+```
+We see that `image1.jpeg` contains more than 40 individuals. You might want to remove image files like this.
+
+```{r, echo = F}
+b <- read.csv('demo/df_dupes.csv')
+b
+```
+We see that image4 and image5 are treated as the same person. Depending on your research objective, you might want to remove duplicate faces. 
 
 ### 1.2. Generate Predictions
 
-Many different CNN models are available. Here, we demonstrate our method using `deepface` (https://github.com/serengil/deepface), which is implemented in Python.
+#### 1.2.1 Use CNN Model
 
+We provide a python function `img_pred` (in `img_pred.py`) that allows for users to predict ethnorace for each image using `deepface` developed by [Sefik Serengil](https://github.com/serengil/deepface) that uses a pre-trained CNN model [VGG-Face](https://sefiks.com/2018/08/06/deep-face-recognition-with-keras/) to predict ethnorace from an image. This package is available in python and is fairly straightforward to use. 
+
+The `img_pred` function takes the following arguments:
+
+* `imgfolder` (string): Name of the folder where the images are saved. 
+* `detector` (string): Detector backend for facial recognition. Choose from "opencv" (default), "retinaface", "mtcnn", "ssd", "dlib", "mediapipe" or "yolov8".
+* `out_csv` (boolean): Save the result as a csv file to a `imgfolder`. Default is TRUE.
+
+```{python, eval = F}
+img_pred(imgfolder = 'demo', detector = "opencv", out_csv = True)
+```
+```{r, echo = F}
+pred <- read.csv('demo/img_pred.csv')
+head(pred)
+```
+
+Not that there are many many different CNN models available. Our function is merely a demonstration using one of these models.
 
 ## 2. Surname-Based Prediction
 
-This part is very simple. Use `wru` package created by [Imai and Khanna (2016)](https://imai.fas.harvard.edu/research/race.html) to generate surname-based predictions:
+Use `wru` package created by [Imai and Khanna (2016)](https://imai.fas.harvard.edu/research/race.html) to generate surname-based predictions. For example, using the `demo` dataset, 
 
-```{r}
+```{r, message = FALSE, comment = FALSE, warning = FALSE}
 library(wru)
-demo <- predict_race(voter.file = demo, surname.only = T)
-demo <- demo %>% rename_at(vars(matches('^pred')), ~ gsub('pred', 'bayes', .x))
+load('demo/demo_data.rdata')
+demo <- demo[,names(demo)[!grepl('bayes', names(demo))]]
+demo1 <- predict_race(voter.file = demo, surname.only = T)
+demo1 <- demo1 %>% rename_at(vars(matches('^pred\\.')), ~ gsub('pred', 'bayes', .x))
 ```
 
-## Run multinomial logistic regression
+## 3. Run multinomial regression
+
+Run multinomial model using prediction probability distributions from image as well as bayesian methods. For example, using the `demo` dataset:
 
 ```{r}
 library(nnet)
-#mod <- multinom(race ~ img.whi + img.bla + img.his + img.asi + bayes.whi + bayes.bla + bayes.his + bayes.asi + bayes.oth, data = demo)
-#demo$pred_race = predict(mod, newdata = demo, "class")
+cov <- names(demo1)[which(grepl('bayes|image', names(demo1)))]
+eq  <- as.formula(paste('race ~ ', paste(cov, collapse = ' + ')))
+print(eq)
+mod <- multinom(eq, data = demo1)
+demo1$pred_race = predict(mod, newdata = demo1, "class")
+demo2 <- cbind(demo1, predict(mod, newdata = demo1, "probs"))
+head(demo2[,c(6, 20:24)])
 ```
 
-
-
-Users are free to employ fancier machine learning algorithms (but our validation finds that this simple multinomial model performs just as well).
+Users may employ fancier machine learning algorithms (but our validation finds that this simple multinomial model performs just as well).
